@@ -1,6 +1,8 @@
 from __future__ import division
 
 import math
+import random
+import fractions
 
 
 def gcd(a, b):
@@ -43,6 +45,13 @@ def n_root(n, r=2, c=100, x_k=None):
         x_k = x_k1
     return x_k
 
+def random_root(base_range=xrange(1, 101), index_range=xrange(2, 4), coeff_range=xrange(-1, 10), not_null=False):
+    kwargs = vars()
+    b, i, c = map(random.choice, (base_range, index_range, coeff_range))
+    if b == 0 and not_null:
+        return random_root(**kwargs)
+    return Root(b, i, c)
+
 class Root(object):
     def __init__(self, b, index=2, coeff=1):
         self._b = b
@@ -50,7 +59,7 @@ class Root(object):
         self._coeff = coeff
         if isinstance(b, Root):
             if b._coeff != 1:
-                b = b._move_in()
+                b = b.move_in()
             self._b = b._b
             self._index *= b._index
 
@@ -80,23 +89,28 @@ class Root(object):
 
     @ property
     def root(self):
+        if isinstance(self._b, fractions.Fraction):
+            return fractions.Fraction.from_float(n_root(self._b.numerator, self._index)) / \
+                   fractions.Fraction.from_float(n_root(self._b.denominator, self._index))
+
         return n_root(self._b, self._index)
 
     def copy(self):
-        return Root(self._b, self._index, 1)
+        return Root(self._b, self._index, self._coeff)
 
-    def _move_in(self):
+    def move_in(self):
         if self._coeff == 1:
             return self.copy()
         i = self._coeff ** self._index
         return Root(i * self._b, self._index)
 
-    def _move_out(self):
+    def move_out(self):
         if self._coeff != 1:
-            return self._move_in()._move_out()
+            return self.move_in().move_out()
         coeff, b = 1, 1
         for f, e in factor(self._b):
             if e < self._index:
+                b *= f
                 continue
             q, r = divmod(e, self._index)
             coeff *= f * q
@@ -105,9 +119,13 @@ class Root(object):
             return self.copy()
         return Root(b, self._index, coeff)
 
-    def _same_index(self, other):
+    def same_index(self, other):
         i = lcm(self._index, other._index)
         return Root(i / self._b, i), Root(i / other._b, i)
+
+    def similar(self, other):
+        return self._b == other._b and \
+               self._index == other._index
 
     def __repr__(self):
         if self._coeff == 1:
@@ -116,18 +134,32 @@ class Root(object):
                                                           self._coeff)
 
     def __add__(self, other):
-        pass
+        a, b = self.move_out(), other.move_out()
+        if a.similar(b):
+            return Root(a._b, a._index, a._coeff + b._coeff)
+        return NotImplemented
 
     def __sub__(self, other):
-        pass
+        a, b = self.move_out(), other.move_out()
+        if a.similar(b):
+            return Root(a._b, a._index, a._coeff - b._coeff)
+        return NotImplemented
 
     def __mul__(self, other):
-        r1, r2 = self._same_index(other)
+        r1, r2 = self.same_index(other)
         return Root(r1._b * r2._b, r1._index)
 
     def __div__(self, other):
-        r1, r2 = self._same_index(other)
+        r1, r2 = self.same_index(other)
         return Root(r1._b / r2._b, r1._index)
 
     def __pow__(self, exp):
         return Root(self._b ** exp, self._index)
+
+    def __eq__(self, other):
+        return self._b == other._b and \
+               self._index == other._index and \
+               self._coeff == other._coeff
+
+    def __ne__(self, other):
+        return not self == other
