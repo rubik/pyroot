@@ -13,7 +13,7 @@ def gcd(a, b):
 def lcm(a, b):
     return (a * b) / gcd(a, b)
 
-def _trial_div(n):
+def _trial_div(n): ## From http://blog.dreamshire.com/2009/03/26/94/
     if n == 1: return 1
     for p in (2, 3, 5):
         if n % p == 0: return p
@@ -26,7 +26,7 @@ def _trial_div(n):
         i += 1
     return n
  
-def factor(n):
+def factor(n): ## From http://blog.dreamshire.com/2009/03/26/94/
     if n in [-1, 0, 1]: return
     if n < 0: n = -n
     while n != 1:
